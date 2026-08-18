@@ -9,7 +9,7 @@ import numpy as np
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 import pdb
-from dummy_data import append_neg_label, append_label
+from dummy_data import append_label
 from graph_loader import append_pos_label, train_loader, train_dataset, test_dataset
 from sklearn.metrics import matthews_corrcoef
 
@@ -123,13 +123,13 @@ class GNN_FF(torch.nn.Module):
 		return x, torch.stack(tuple(g), 0).sum(0)
 
 	def train_ff(self, data, positive, optimizer):
-		for d in data:
-			x, edge_index = data.x, data.edge_index
-		# print(x)
+		# for d in data:
+		x, edge_index = data.x, data.edge_index
+		print(len(x))
 		for layer in self.layers:
 			x = x.detach()
 			x = layer(x, edge_index)
-		# 	print("X after layer:",x)
+			# print("X after layer:",x)
 			x = self.relu(x)
 		# 	print("X after relu:", x)
 			out = goodness(x)
@@ -155,11 +155,20 @@ def train(model, train_loader, optimizer, device):
     model.train()
     # x = train_loader
     for epoch in range(10):
-    	x = append_pos_label(train_loader)
-    	loss = model.train_ff(x, True, optimizer)
-    	x = append_neg_label(train_loader)
-    	loss = model.train_ff(x, False, optimizer)
-
+    	for graph in train_loader:
+    		for i in range(2):
+	    		if i == 0:
+	    			label = torch.Tensor([0, 1])
+	    		x = append_label(graph.x, graph.edge_index, label)
+	    		# print("X pos values: ", x)
+		    	loss = model.train_ff(x, True, optimizer)
+		    	# print("Loss neg: ", loss)
+		    	if i == 1:
+		    		label = torch.Tensor([1, 0])
+		    	x = append_label(graph.x, graph.edge_index, label)
+		    	# print("X neg values: ", x)
+		    	loss = model.train_ff(x, False, optimizer)
+		    	# print("Loss pos: ", loss)
 
 train(model=model, train_loader=train_dataset, optimizer=optimizer, device=device)
 
@@ -179,15 +188,15 @@ def predict(model, pred_data):
 			_, g = model.forward(x)
 			print("g:", g)
 			g_for_label += [g]
-		# g_for_label.append(g)
+			# g_for_label.append(g)
 	# pdb.set_trace()
-	print("argmax: ", torch.stack(g_for_label, 0).argmax(0))
-	print("Total goodness: ", torch.stack(g_for_label, 0))#.argmax(0))
-	# return torch.stack(g_for_label, 0).argmax(0)
+		print("argmax: ", torch.stack(g_for_label, 0).argmax(0))
+		print("Total goodness: ", torch.stack(g_for_label, 0))#.argmax(0))
+	return torch.stack(g_for_label, 0).argmax(0)
 	# pdb.set_trace()
 
 print("train_dataset: ", len(train_dataset))
-predict(model=model, pred_data=train_dataset)
+# predict(model=model, pred_data=train_dataset)
 # pdb.set_trace()
 
 # for i in train_dataset:

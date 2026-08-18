@@ -123,29 +123,17 @@ neg_data = NEGDataset(annotation_file="annotation_file.csv", dataset_dir=dataset
 print("Num Features: ",neg_data.num_node_features)
 print(neg_data.num_classes)
 
-def append_neg_label(neg_data):
-    for n in neg_data:
-        x, edge_index, y = n.x, n.edge_index, n.label
-        label_one = torch.ones(len(x))
-        label_zero = torch.zeros(len(x))
-        label_one = label_one.unsqueeze(1)
-        label_zero = label_zero.unsqueeze(1)
-        x = torch.cat([x, label_zero, label_one], dim=1)
-    return Data(x, edge_index)
+# def append_neg_label(neg_data):
+    # for n in neg_data:
+    #     x, edge_index, y = n.x, n.edge_index, n.label
+    #     label_one = torch.ones(len(x))
+    #     label_zero = torch.zeros(len(x))
+    #     label_one = label_one.unsqueeze(1)
+    #     label_zero = label_zero.unsqueeze(1)
+    #     x = torch.cat([x, label_zero, label_one], dim=1)
+    # return Data(x, edge_index)
+    
 
-
-# def append_label(data):
-#     for n in data:
-#         x, edge_index, label = n.x, n.edge_index, n.label
-#         label = label.repeat(len(x))
-#         print(label.shape)
-#         for i in range(2):
-#             i = torch.tensor(i, dtype=torch.float)
-#             label = i.repeat(len(x))
-#             label = label.unsqueeze(1)
-#             x = torch.cat([x, label], dim=1)
-#             print(x[0])
-#     return Data(x=x, edge_index=edge_index)
 
 def append_label(data, edge_index, y):
     # for n in data:
