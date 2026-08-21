@@ -72,7 +72,7 @@ content = os.listdir(dataset_dir)
 files = np.array(content)
 print(files)
 
-train_set, test_set = train_test_split(files, test_size=0.2)
+train_set, test_set = train_test_split(files, test_size=0.2, shuffle=True)
 print("train_set",train_set)
 
 

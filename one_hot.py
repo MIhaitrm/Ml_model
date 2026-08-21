@@ -11,7 +11,9 @@ from torch_geometric.loader import DataLoader
 import pdb
 from dummy_data import append_label
 from graph_loader import append_pos_label, train_loader, train_dataset, test_dataset
+from sklearn.metrics import classification_report
 from sklearn.metrics import matthews_corrcoef
+import random
 
 dataset = train_dataset
 try:
@@ -76,6 +78,7 @@ y = torch.ones(len(x))
 # print(F.one_hot(x))
 # F.one_hot(torch.arange(0, 5) % 3, num_classes=5)
 # F.one_hot(torch.arange(0, 6).view(3,2) % 3)
+random.seed(42)
 
 def goodness(data):
 	goodness = data.pow(2).mean(1)
@@ -83,7 +86,7 @@ def goodness(data):
 
 
 def loss_ff(x, positive):
-	threshold = 0.5
+	threshold = 2
 	theta = threshold if positive else -threshold
 	out = -x if positive else x  ### Loss is calculated different for positive and negative examples
 	loss = torch.log(1+torch.exp(out+theta)).mean()
@@ -125,7 +128,7 @@ class GNN_FF(torch.nn.Module):
 	def train_ff(self, data, positive, optimizer):
 		# for d in data:
 		x, edge_index = data.x, data.edge_index
-		print(len(x))
+		# print(len(x))
 		for layer in self.layers:
 			x = x.detach()
 			x = layer(x, edge_index)
@@ -161,21 +164,22 @@ def train(model, train_loader, optimizer, device):
 	    			label = torch.Tensor([0, 1])
 	    		x = append_label(graph.x, graph.edge_index, label)
 	    		# print("X pos values: ", x)
-		    	loss = model.train_ff(x, True, optimizer)
+		    	loss = model.train_ff(x, False, optimizer)
 		    	# print("Loss neg: ", loss)
 		    	if i == 1:
 		    		label = torch.Tensor([1, 0])
 		    	x = append_label(graph.x, graph.edge_index, label)
 		    	# print("X neg values: ", x)
-		    	loss = model.train_ff(x, False, optimizer)
+		    	loss = model.train_ff(x, True, optimizer)
 		    	# print("Loss pos: ", loss)
 
 train(model=model, train_loader=train_dataset, optimizer=optimizer, device=device)
 
 def predict(model, pred_data):
-	print("Len train data:", len(pred_data))
+	# print("Len train data:", len(pred_data))
 	out = pred_data
 	g_for_label = []
+	gg = []
 	for sample in out:
 		# print("Sample len:", sample.x.shape)
 		for i in range(2):
@@ -186,23 +190,22 @@ def predict(model, pred_data):
 			x = append_label(sample.x, sample.edge_index, label)
 			# print("X:", x.shape)
 			_, g = model.forward(x)
-			print("g:", g)
-			g_for_label += [g]
-			# g_for_label.append(g)
+			gg += [g]
+			# print("g:", g)
+		good = torch.Tensor(gg).argmax(0)
+		print("good:", good)
+	g_for_label += [good]
+	print("G_for_label:", g_for_label)
 	# pdb.set_trace()
-		print("argmax: ", torch.stack(g_for_label, 0).argmax(0))
-		print("Total goodness: ", torch.stack(g_for_label, 0))#.argmax(0))
-	return torch.stack(g_for_label, 0).argmax(0)
+		# value = torch.Tensor(g_for_label).argmax(0)
+		# print("Value: ", value)
+	# print("argmax: ", torch.stack(g_for_label, 0).argmax(0))
+	# print("Total goodness: ", torch.stack(g_for_label, 0))#.argmax(0))
+	# return torch.stack(g_for_label, 0).argmax(0)
+	return torch.stack(g_for_label, 0)
 	# pdb.set_trace()
 
-print("train_dataset: ", len(train_dataset))
 # predict(model=model, pred_data=train_dataset)
-# pdb.set_trace()
-
-# for i in train_dataset:
-# 	x, edge_index = i.x, i.edge_index
-# 	print(x)
-
 
 def test(model, test_loader, device):
     correct = 0
@@ -225,10 +228,24 @@ def test(model, test_loader, device):
             corr.append(label)
             print("Pred_s: ",pred_s)
             print("Corr: ", corr)
-            mcc = matthews_corrcoef(corr, pred_s)
-            print("MCC: ", mcc)
-    return acc, mcc
+            preds = []
+            for i in pred_s:
+            	if i == 0:
+            		score = [0, 1]
+            	else:
+            		score = [1, 0]
+            	preds += score
+            print("Preds: ", preds)
+            corrects = []
+            for i in corr:
+            	if i ==1:
+            		s = [1, 0]
+            	corrects += s
+        mcc = matthews_corrcoef(torch.tensor(corrects), preds)
+        print("MCC: ", mcc)
+        print("Scores: ", classification_report(corr, pred_s, labels=[1]))
+    return acc
 
-# test(model=model, test_loader=test_dataset, device=device)
+test(model=model, test_loader=test_dataset, device=device)
 
 
